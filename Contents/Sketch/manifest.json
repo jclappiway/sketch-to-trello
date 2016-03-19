@@ -1,0 +1,27 @@
+{
+    "name": "Sketch-to-trello",
+    "description": "Export Sketch Artboard to Trello",
+    "author": "Appiway",
+    "authorEmail": "dev@appiway.com",
+    "homepage": "http://appiway.com",
+    "version": "0.1",
+    "identifier": "com.appiway.trello-sketch-plugin",
+    "commands": [{
+        "name": "Update Token and key…",
+        "identifier": "init",
+        "script": "utils.cocoascript",
+        "handler": "initToken"
+    }, {
+        "name": "Publish to Card…",
+        "identifier": "list",
+        "shortcut": "ctrl alt cmd t",
+        "script": "utils.cocoascript",
+        "handler": "exportFunction"
+    }],
+    "menu": {
+        "items": [
+            "init",
+            "list"
+        ]
+    }
+}
