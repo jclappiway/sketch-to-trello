@@ -1,0 +1,164 @@
+var rootURL = "https://api.trello.com/1/";
+
+var tokenPath = NSHomeDirectory() + "/.trelloToken"
+var keyPath = NSHomeDirectory() + "/.trelloKey"
+var optionsPath = NSHomeDirectory() + "/.trelloOptions"
+
+var options = {board : nil, list:nil}
+var selection = null;
+var plugin = null;
+var doc = null;
+var boards = [];
+var lists = [];
+var cards = [];
+var activeBoardNames = [NSMutableArray array];
+var activeBoardIds = [NSMutableArray array];
+var activeListNames = [NSMutableArray array];
+var activeListIds = [NSMutableArray array];
+var activeCardNames = [NSMutableArray array];
+var activeCardIds = [NSMutableArray array];
+
+var getJSON = function(url) {
+  var request = NSURLRequest.requestWithURL(NSURL.URLWithString(url));
+  var response = NSURLConnection.sendSynchronousRequest_returningResponse_error(request, null, null);
+  var responseObject = [NSJSONSerialization JSONObjectWithData: response options: nil error: nil];
+  return responseObject;
+}
+
+var getBoards = function(){
+  var infos = getActiveToken();
+
+  var response = getJSON(rootURL + 'members/me?key=' + infos.key + '&token=' + infos.token + '&board_fields=name,id&boards=open');
+  boards = response.boards;
+
+  for (var i = 0; i < [boards count]; i++) {
+    var board = [boards objectAtIndex:i]
+    [activeBoardNames addObject:board.name];
+    [activeBoardIds addObject:board.id];
+  }
+
+  return activeBoardNames;
+}
+var getLists = function(id){
+  var infos = getActiveToken();
+  var response = getJSON(rootURL + 'boards/'+id+'/lists?key=' + infos.key + '&token=' + infos.token);
+  lists = response;
+
+  for (var i = 0; i < [lists count]; i++) {
+    var list = [lists objectAtIndex:i]
+
+    [activeListNames addObject:list.name];
+    [activeListIds addObject:list.id];
+  }
+
+  return activeListNames;
+}
+
+var getCards = function(id){
+  var infos = getActiveToken();
+  var response = getJSON(rootURL + 'lists/'+id+'/cards?key=' + infos.key + '&token=' + infos.token+'&fields=id,name');
+
+  cards = response;
+
+  for (var i = 0; i < [cards count]; i++) {
+    var card = [cards objectAtIndex:i]
+
+    [activeCardNames addObject:card.name];
+    [activeCardIds addObject:card.id];
+  }
+
+  return activeCardNames;
+}
+
+var getCover = function(cardId){
+  var infos = getActiveToken();
+
+  var result = nil;
+  var response = getJSON(rootURL + 'cards/'+cardId+'/attachments?key=' + infos.key + '&token=' + infos.token+'&fields=idMember');
+  var count = [response count];
+  if(count > 0){
+    result = response[0].id
+  }
+
+  return result;
+};
+
+var getAttachments = function(cardId){
+  var infos = getActiveToken();
+
+  var response = getJSON(rootURL + 'cards/'+cardId+'/attachments?key=' + infos.key + '&token=' + infos.token+'&fields=idMember@filter=false');
+
+  return response;
+}
+
+var postFile = function(path, choice) {
+  var infos = getActiveToken();
+  var cardId = [activeCardIds objectAtIndex:choice.card];
+  var isCover = choice.is_cover;
+  var task = NSTask.alloc().init();
+  var coverId = nil;
+
+  if(isCover === 0 ){
+    coverId = getCover(cardId)
+  }
+
+  task.setLaunchPath("/usr/bin/curl");
+  var args = NSArray.arrayWithObjects("-F", "key=" + infos.key,"-F", "token=" + infos.token, "-F", "file=@" + path, rootURL+"cards/"+cardId+"/attachments", nil);
+  task.setArguments(args);
+  task.launch();
+  task.waitUntilExit();
+
+  int status = [task terminationStatus];
+
+  if (status == 0) {
+    if(coverId !== nil){
+      pinCover(cardId, coverId)
+    }
+
+    if(isCover === 1){
+      var attachments = getAttachments(cardId);
+      var count = [attachments count];
+      count = count-1;
+      pinCover(cardId,attachments[count].id);
+    }
+    return true;
+  }
+
+}
+
+var pinCover = function(cardId, coverId) {
+  var infos = getActiveToken();
+
+  var task = NSTask.alloc().init()
+  task.setLaunchPath("/usr/bin/curl");
+  var args = NSArray.arrayWithObjects("-X","PUT","-d", "key=" + infos.key,"-d", "token=" + infos.token, "-d", "value="+coverId, rootURL+"cards/"+cardId+"/idAttachmentCover", nil);
+  task.setArguments(args);
+  task.launch();
+}
+
+var moveCard = function(choice) {
+  var infos = getActiveToken();
+  var cardId = [activeCardIds objectAtIndex:choice.card];
+  var listId = [activeListIds objectAtIndex:choice.list];
+
+  var task = NSTask.alloc().init()
+  task.setLaunchPath("/usr/bin/curl");
+  var args = NSArray.arrayWithObjects("-X","PUT","-d", "key=" + infos.key,"-d", "token=" + infos.token, "-d", "value="+listId, rootURL+"cards/"+cardId+"/idList", nil);
+  task.setArguments(args);
+  task.launch();
+  doc.showMessage("👏 The operation is complete");
+}
+
+
+var addComment = function(choice) {
+  var infos = getActiveToken();
+  var cardId = [activeCardIds objectAtIndex:choice.card];
+  var comment = choice.comment;
+  var task = NSTask.alloc().init()
+
+  task.setLaunchPath("/usr/bin/curl");
+  var args = NSArray.arrayWithObjects("-F", "key=" + infos.key,"-F", "token=" + infos.token, "-F", "text=" + comment, rootURL+"cards/"+cardId+"/actions/comments", nil);
+  task.setArguments(args);
+  task.launch();
+  return true;
+}

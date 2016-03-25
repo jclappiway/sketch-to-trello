@@ -1,18 +1,4 @@
-var rootURL = "https://api.trello.com/1/";
-var tokenPath = NSHomeDirectory() + "/.trelloToken"
-var keyPath = NSHomeDirectory() + "/.trelloKey"
-
-var selection = null;
-var doc = null;
-var boards = [];
-var lists = [];
-var cards = [];
-var activeBoardNames = [NSMutableArray array];
-var activeBoardIds = [NSMutableArray array];
-var activeListNames = [NSMutableArray array];
-var activeListIds = [NSMutableArray array];
-var activeCardNames = [NSMutableArray array];
-var activeCardIds = [NSMutableArray array];
+@import "api.cocoascript"
 
 var initToken = function(context){
     doc = context.document;
@@ -23,14 +9,19 @@ var initToken = function(context){
         fileManager.createFileAtPath_contents_attributes(tokenPath, token, nil)
         fileManager.createFileAtPath_contents_attributes(keyPath, key, nil)
     } else {
-        [doc showMessage:"Your Slack API token is invalid!"]
+        [doc showMessage:"👻 Your Trello API token is invalid!"]
     }
+}
+
+var saveInfos = function(){
+    var fileManager = NSFileManager.defaultManager()
+    fileManager.createFileAtPath_contents_attributes(optionsPath, JSON.stringify(options), nil)
 }
 
 var verifyAuth = function (context, key, token) {
     var response = getJSON(rootURL + "members/me?key=" + key+'&token='+token);
     if (response.username) {
-        [doc showMessage: "Logged in as " + response.username];
+        [doc showMessage: "👋 Logged in as " + response.username];
     }else{
         return false
     }
@@ -40,12 +31,14 @@ var verifyAuth = function (context, key, token) {
 var exportFunction = function(context){
     doc = context.document;
     selection  = context.selection;
+    plugin  = context.plugin;
     chooseBoard();
 }
 
 var chooseBoard = function(){
     getBoards();
-    var choice = createSelect('Choose a board...', activeBoardNames, nil)
+    getOptions();
+    var choice = createSelect('Choose a board...', activeBoardNames, options.board, 'board@2x.png')
     if (choice != -1) {
         chooseList(choice);
     }
@@ -53,67 +46,30 @@ var chooseBoard = function(){
 
 var chooseList = function(choice){
     var boardId = [activeBoardIds objectAtIndex:choice];
+    options.board = choice;
     getLists(boardId);
-    var choice = createSelect('Choose a List...', activeListNames, nil)
+    var choice = createSelect('Choose a List...', activeListNames, options.list, 'list@2x.png')
     if (choice != -1) {
         chooseCard(choice);
     }
- }
+}
 
- var chooseCard = function(choice){
-    var listId = [activeListIds objectAtIndex:choice];
-    getCards(listId);
-    var choice = createSelect('Choose a Card...', activeCardNames, nil)
-    if (choice != -1) {
-        exportArtboardsAndSendTo(choice)
+var chooseCard = function(choice){
+    options.list = choice;
+    var card = createSelectBoard('Choose a Card...', choice)
+    if (card != -1) {
+        exportArtboardsAndSendTo(card)
     }
 }
 
-var getBoards = function(){
-    var infos = getActiveToken();
-
-    var response = getJSON(rootURL + 'members/me?key=' + infos.key + '&token=' + infos.token + '&board_fields=name,id&boards=open');
-    boards = response.boards;
-
-    for (var i = 0; i < [boards count]; i++) {
-        var board = [boards objectAtIndex:i]
-        [activeBoardNames addObject:board.name];
-        [activeBoardIds addObject:board.id];
+function getOptions(){
+    var fileExists = NSFileManager.defaultManager().fileExistsAtPath(optionsPath);
+    if (fileExists) {
+        var data = NSString.stringWithContentsOfFile_encoding_error(optionsPath,NSUTF8StringEncoding,nil)
+        options = JSON.parse(data)
     }
-
-    return activeBoardNames;
+    return options;
 }
-
-var getLists = function(id){
-    var infos = getActiveToken();
-    var response = getJSON(rootURL + 'boards/'+id+'/lists?key=' + infos.key + '&token=' + infos.token);
-    lists = response;
-
-    for (var i = 0; i < [lists count]; i++) {
-        var list = [lists objectAtIndex:i]
-
-        [activeListNames addObject:list.name];
-        [activeListIds addObject:list.id];
-    }
-
-    return activeListNames;
-}
-
-var getCards = function(id){
-    var infos = getActiveToken();
-    var response = getJSON(rootURL + 'lists/'+id+'/cards?key=' + infos.key + '&token=' + infos.token+'&fields=id,name');
-
-    cards = response;
-    for (var i = 0; i < [cards count]; i++) {
-        var card = [cards objectAtIndex:i]
-
-        [activeCardNames addObject:card.name];
-        [activeCardIds addObject:card.id];
-    }
-
-    return activeCardNames;
-}
-
 
 function getActiveToken() {
     var fileExists = NSFileManager.defaultManager().fileExistsAtPath(tokenPath);
@@ -126,16 +82,9 @@ function getActiveToken() {
     }
 }
 
-var getJSON = function(url) {
-    var request = NSURLRequest.requestWithURL(NSURL.URLWithString(url));
-    var response = NSURLConnection.sendSynchronousRequest_returningResponse_error(request, null, null);
-    var responseObject = [NSJSONSerialization JSONObjectWithData: response options: nil error: nil];
-    log(responseObject);
-    return responseObject;
-}
-
-var createSelect = function (msg, items, selectedItemIndex){
+var createSelect = function (msg, items, selectedItemIndex, icon){
   selectedItemIndex = selectedItemIndex || 0
+  icon = icon || nil
 
   var accessory = [[NSComboBox alloc] initWithFrame:NSMakeRect(0,0,200,25)]
   [accessory setCompletes:true]
@@ -143,6 +92,14 @@ var createSelect = function (msg, items, selectedItemIndex){
   [accessory selectItemAtIndex:selectedItemIndex]
 
   var alert = [[NSAlert alloc] init]
+
+  if(icon !== nil){
+      var iconUrl = [plugin urlForResourceNamed:icon]
+      var icon = [[NSImage alloc] initWithContentsOfURL:iconUrl];
+  }
+
+
+  [alert setIcon:icon]
   [alert setMessageText:msg]
   [alert addButtonWithTitle:'OK']
   [alert addButtonWithTitle:'Cancel']
@@ -157,30 +114,101 @@ var createSelect = function (msg, items, selectedItemIndex){
   }
 }
 
+var createSelectBoard = function (msg, choice){
+    var listId = [activeListIds objectAtIndex:choice];
+    getCards(listId);
+
+    if([activeCardNames count] === 0){
+        [doc showMessage:"🤕 You should create cards on trello"]
+        var e = [NSException
+        exceptionWithName:@"No cards in this list"
+        reason:@"You should create cards on trello"
+        userInfo:nil];
+        throw e;
+
+    }
+
+    var accessory = [[NSView alloc] initWithFrame:NSMakeRect(0,0,200,200)]
+
+    var cards = [[NSComboBox alloc] initWithFrame:NSMakeRect(0,175,200,25)]
+    [cards setCompletes:true]
+    [cards addItemsWithObjectValues:activeCardNames]
+    [cards selectItemAtIndex:0]
+
+    var listLabel = [[NSTextView alloc] initWithFrame:NSMakeRect(0,140,200,25)]
+    [listLabel setString:"Move to another list ?"]
+    [listLabel setDrawsBackground:0];
+    [listLabel setEditable:0];
+    [listLabel setSelectable:0];
+
+    var lists = [[NSComboBox alloc] initWithFrame:NSMakeRect(0,115,200,25)]
+    [lists setCompletes:true]
+    [lists addItemsWithObjectValues:activeListNames]
+    [lists selectItemAtIndex:0]
+
+    var labelComment = [[NSTextView alloc] initWithFrame:NSMakeRect(0,80,200,25)]
+    [labelComment setString:"Add a comment"]
+    [labelComment setDrawsBackground:0];
+    [labelComment setEditable:0];
+    [labelComment setSelectable:0];
+
+    var comment = [[NSTextView alloc] initWithFrame:NSMakeRect(0,55,200,25)]
+
+    var shouldCover = [[NSButton alloc] initWithFrame:NSMakeRect(0,30,200,25)]
+    [shouldCover setButtonType:NSSwitchButton]
+    [shouldCover setTitle:"Set the image as cover ?"]
+
+    [accessory addSubview:cards]
+    [accessory addSubview:listLabel]
+    [accessory addSubview:lists]
+    [accessory addSubview:labelComment]
+    [accessory addSubview:comment]
+    [accessory addSubview:shouldCover]
+
+
+    var alert = [[NSAlert alloc] init]
+
+    var iconUrl = [plugin urlForResourceNamed:"card@2x.png"]
+    var icon = [[NSImage alloc] initWithContentsOfURL:iconUrl];
+
+
+    [alert setIcon:icon]
+    [alert setMessageText:msg]
+    [alert addButtonWithTitle:'OK']
+    [alert addButtonWithTitle:'Cancel']
+    [alert setAccessoryView:accessory]
+
+    var responseCode = [alert runModal]
+    if (responseCode == 1000) {
+      return {is_cover:[shouldCover state], comment: [[comment textStorage] string], card :[cards indexOfSelectedItem], list: [lists indexOfSelectedItem] }
+  } else {
+      return -1
+  }
+}
+
 
 var exportArtboardsAndSendTo = function(choice) {
-    var cardId = [activeCardIds objectAtIndex:choice];
+    var done = 0;
     var loop = [selection objectEnumerator]
-    log('here');
+
+    //save selected infos
+    saveInfos();
+    //export selected ArtBoards
     while (item = [loop nextObject]) {
-        log(item.className())
         if (item.className() == "MSArtboardGroup") {
             var path = NSTemporaryDirectory() + item.name() + ".png"
             [doc saveArtboardOrSlice:item toFile: path];
-            postFile(path, cardId)
+            if(postFile(path, choice)){
+                moveCard(choice)
+                addComment(choice)
+                done ++;
+            }
         }
     }
-}
-
-var postFile = function(path, cardId) {
-    var infos = getActiveToken();
-    var token = infos.token;
-    var key = infos.key;
-
-    var task = NSTask.alloc().init()
-    task.setLaunchPath("/usr/bin/curl");
-    log(path)
-    var args = NSArray.arrayWithObjects("-F", "key=" + infos.key,"-F", "token=" + infos.token, "-F", "file=@" + path, rootURL+"cards/"+cardId+"/attachments", nil);
-    task.setArguments(args);
-    task.launch();
+    //feedback on what happened
+    if(done > 0){
+        doc.showMessage("The operation is complete 👏")
+    }else{
+        doc.showMessage("😱 Nothing happened...Did you select any artboards ?")
+    }
 }
