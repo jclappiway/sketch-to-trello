@@ -130,7 +130,7 @@ var pinCover = function(cardId, coverId) {
 
   var task = NSTask.alloc().init()
   task.setLaunchPath("/usr/bin/curl");
-  if(coverId === nil){
+  if(coverId === nil || coverId === null ){
     coverValue =  "value=null";
   }else{
     coverValue =  "value="+coverId;

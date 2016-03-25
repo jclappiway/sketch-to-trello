@@ -152,7 +152,7 @@ var createSelectBoard = function (msg, choice){
     [labelComment setEditable:0];
     [labelComment setSelectable:0];
 
-    var comment = [[NSTextView alloc] initWithFrame:NSMakeRect(0,55,200,25)]
+    var comment = [[NSTextField alloc] initWithFrame:NSMakeRect(0,55,200,25)]
 
     var shouldCover = [[NSButton alloc] initWithFrame:NSMakeRect(0,30,200,25)]
     [shouldCover setButtonType:NSSwitchButton]
@@ -180,7 +180,7 @@ var createSelectBoard = function (msg, choice){
 
     var responseCode = [alert runModal]
     if (responseCode == 1000) {
-      return {is_cover:[shouldCover state], comment: [[comment textStorage] string], card :[cards indexOfSelectedItem], list: [lists indexOfSelectedItem] }
+      return {is_cover:[shouldCover state], comment: [comment stringValue], card :[cards indexOfSelectedItem], list: [lists indexOfSelectedItem] }
   } else {
       return -1
   }
