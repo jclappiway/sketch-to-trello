@@ -38,7 +38,7 @@ var exportFunction = function(context){
 var chooseBoard = function(){
     getBoards();
     getOptions();
-    var choice = createSelect('Choose a board...', activeBoardNames, options.board, 'board@2x.png')
+    var choice = createSelect('Choose a board...', activeBoardNames, options.board, 'board.png')
     if (choice != -1) {
         chooseList(choice);
     }
@@ -48,7 +48,7 @@ var chooseList = function(choice){
     var boardId = [activeBoardIds objectAtIndex:choice];
     options.board = choice;
     getLists(boardId);
-    var choice = createSelect('Choose a List...', activeListNames, options.list, 'list@2x.png')
+    var choice = createSelect('Choose a List...', activeListNames, options.list, 'list.png')
     if (choice != -1) {
         chooseCard(choice);
     }
@@ -168,7 +168,7 @@ var createSelectBoard = function (msg, choice){
 
     var alert = [[NSAlert alloc] init]
 
-    var iconUrl = [plugin urlForResourceNamed:"card@2x.png"]
+    var iconUrl = [plugin urlForResourceNamed:"card.png"]
     var icon = [[NSImage alloc] initWithContentsOfURL:iconUrl];
 
 
