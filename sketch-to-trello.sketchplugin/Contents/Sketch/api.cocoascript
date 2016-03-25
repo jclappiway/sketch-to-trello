@@ -111,27 +111,33 @@ var postFile = function(path, choice) {
   int status = [task terminationStatus];
 
   if (status == 0) {
-    if(coverId !== nil){
-      pinCover(cardId, coverId)
-    }
 
     if(isCover === 1){
       var attachments = getAttachments(cardId);
       var count = [attachments count];
       count = count-1;
       pinCover(cardId,attachments[count].id);
+    }else{
+      pinCover(cardId, coverId)
     }
     return true;
   }
-
 }
 
 var pinCover = function(cardId, coverId) {
   var infos = getActiveToken();
+  var coverValue= "";
 
   var task = NSTask.alloc().init()
   task.setLaunchPath("/usr/bin/curl");
-  var args = NSArray.arrayWithObjects("-X","PUT","-d", "key=" + infos.key,"-d", "token=" + infos.token, "-d", "value="+coverId, rootURL+"cards/"+cardId+"/idAttachmentCover", nil);
+  if(coverId === nil){
+    coverValue =  "value=null";
+  }else{
+    coverValue =  "value="+coverId;
+  }
+
+  var args = NSArray.arrayWithObjects("-X","PUT","-d", "key=" + infos.key,"-d", "token=" + infos.token, "-d", coverValue, rootURL+"cards/"+cardId+"/idAttachmentCover", nil);
+
   task.setArguments(args);
   task.launch();
 }

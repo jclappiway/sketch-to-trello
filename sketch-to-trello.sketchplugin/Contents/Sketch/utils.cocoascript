@@ -125,7 +125,6 @@ var createSelectBoard = function (msg, choice){
         reason:@"You should create cards on trello"
         userInfo:nil];
         throw e;
-
     }
 
     var accessory = [[NSView alloc] initWithFrame:NSMakeRect(0,0,200,200)]
@@ -145,6 +144,7 @@ var createSelectBoard = function (msg, choice){
     [lists setCompletes:true]
     [lists addItemsWithObjectValues:activeListNames]
     [lists selectItemAtIndex:0]
+    [lists selectItemAtIndex:options.list]
 
     var labelComment = [[NSTextView alloc] initWithFrame:NSMakeRect(0,80,200,25)]
     [labelComment setString:"Add a comment"]
