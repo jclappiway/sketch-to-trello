@@ -1,0 +1,80 @@
+@import "api.cocoascript"
+
+var tarball = null;
+var sha = null;
+var path = '/tmp/';
+var downloadPath = '/tmp/';
+var downloadAs = '/tmp/sketch-to-trello.tar.gz';
+
+var update = function(context){
+    doc = context.document;
+    var pluginPath = [NSString stringWithFormat:@'%@', context.scriptPath.replace(/\/(\w*)\.cocoascript$/, '//')];
+
+    var manifestContent = [NSData dataWithContentsOfFile: [NSString stringWithFormat:@'%@manifest.json', pluginPath]];
+    var manifest = [NSJSONSerialization JSONObjectWithData:manifestContent options:nil error:nil];
+    log(parseFloat(manifest.version));
+    var currentVersion = parseFloat(manifest.version);
+
+    var release = getJSON('https://api.github.com/repos/jclappiway/sketch-to-trello/releases/latest');
+    var release_version = parseFloat(release.tag_name);
+    tarball = release.tarball_url;
+
+    var commits = getJSON('https://api.github.com/repos/jclappiway/sketch-to-trello/commits');
+    sha = commits[0].sha.substr(0,7);
+
+    log(sha);
+
+    if(currentVersion < release_version){
+      downloadTar();
+    }
+}
+
+
+var downloadTar = function(){
+  var task = NSTask.alloc().init();
+
+  task.setLaunchPath("/usr/bin/curl");
+  var args = NSArray.arrayWithObjects("-o", downloadAs, "-L", tarball);
+  task.setArguments(args);
+  task.launch();
+  task.waitUntilExit();
+
+  int status = [task terminationStatus];
+
+  if (status == 0) {
+    untar()
+  }
+}
+
+var untar = function(){
+  var task = NSTask.alloc().init();
+
+  task.setLaunchPath("/usr/bin/tar");
+  var args = NSArray.arrayWithObjects("-C", downloadPath, "-xf", downloadAs);
+  task.setArguments(args);
+  task.launch();
+  task.waitUntilExit();
+
+  int status = [task terminationStatus];
+
+  if (status == 0) {
+    moove()
+  }
+}
+
+var moove = function(){
+  var task = NSTask.alloc().init();
+
+  task.setLaunchPath("/bin/cp");
+  log("/tmp/jclappiway-sketch-to-trello-"+sha);
+  var args = NSArray.arrayWithObjects("-R", downloadPath+"jclappiway-sketch-to-trello-"+sha, path);
+  task.setArguments(args);
+  task.launch();
+  task.waitUntilExit();
+
+  int status = [task terminationStatus];
+
+  if (status == 0) {
+    log('its mooved');
+  }
+}

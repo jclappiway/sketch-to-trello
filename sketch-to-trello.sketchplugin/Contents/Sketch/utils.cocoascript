@@ -4,7 +4,7 @@ var initToken = function(context){
     doc = context.document;
     var key = [doc askForUserInput:"What is your API key?" initialValue:""]
     var token = [doc askForUserInput:"What is your API token?" initialValue:""]
-    if (verifyAuth(context,key, token) == true) {
+    if (verifyAuth(key, token, false) == true) {
         var fileManager = NSFileManager.defaultManager()
         fileManager.createFileAtPath_contents_attributes(tokenPath, token, nil)
         fileManager.createFileAtPath_contents_attributes(keyPath, key, nil)
@@ -18,21 +18,28 @@ var saveInfos = function(){
     fileManager.createFileAtPath_contents_attributes(optionsPath, JSON.stringify(options), nil)
 }
 
-var verifyAuth = function (context, key, token) {
+var verifyAuth = function (key, token, silent) {
     var response = getJSON(rootURL + "members/me?key=" + key+'&token='+token);
     if (response.username) {
+      if(silent == false){
         [doc showMessage: "👋 Logged in as " + response.username];
+      }
+      return true;
     }else{
         return false
     }
-    return true;
 }
 
 var exportFunction = function(context){
     doc = context.document;
     selection  = context.selection;
     plugin  = context.plugin;
-    chooseBoard();
+    var infos = getActiveToken();
+    if (verifyAuth(infos.key, infos.token, true) == true) {
+      chooseBoard();
+    }else{
+      [doc showMessage: "👽 Your token has probably expired… Please check it"];
+    }
 }
 
 var chooseBoard = function(){
