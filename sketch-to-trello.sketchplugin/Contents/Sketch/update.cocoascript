@@ -13,21 +13,25 @@ var doc = null;
 var update = function(context){
     doc = context.document;
     pluginPath = context.scriptPath.split('sketch-to-trello.sketchplugin')[0];
-    var pluginSketchPath = [NSString stringWithFormat:@'%@', context.scriptPath.replace(/\/(\w*)\.cocoascript$/, '//')];
-    var manifestContent = [NSData dataWithContentsOfFile: [NSString stringWithFormat:@'%@manifest.json', pluginSketchPath]];
-    var manifest = [NSJSONSerialization JSONObjectWithData:manifestContent options:nil error:nil];
-    var currentVersion = parseFloat(manifest.version);
 
-    var githubManifest = getJSON(rawUrl+'manifest.json');
-    var release_version = parseFloat(githubManifest.version);
-
-    if(currentVersion < release_version){
+    if(needUpdate(context)){
       downloadTar();
     }else{
       [doc showMessage:"Your sketch-to-trello plugin is already up to date"];
     }
 }
 
+var needUpdate = function(context){
+  var pluginSketchPath = [NSString stringWithFormat:@'%@', context.scriptPath.replace(/\/(\w*)\.cocoascript$/, '//')];
+  var manifestContent = [NSData dataWithContentsOfFile: [NSString stringWithFormat:@'%@manifest.json', pluginSketchPath]];
+  var manifest = [NSJSONSerialization JSONObjectWithData:manifestContent options:nil error:nil];
+  var currentVersion = parseFloat(manifest.version);
+
+  var githubManifest = getJSON(rawUrl+'manifest.json');
+  var release_version = parseFloat(githubManifest.version);
+
+  return (currentVersion < release_version);
+}
 
 var downloadTar = function(){
   var task = NSTask.alloc().init();
@@ -41,7 +45,7 @@ var downloadTar = function(){
   int status = [task terminationStatus];
 
   if (status == 0) {
-    untar()
+    untar();
   }
 }
 
@@ -57,7 +61,7 @@ var untar = function(){
   int status = [task terminationStatus];
 
   if (status == 0) {
-    moove()
+    moove();
   }
 }
 
