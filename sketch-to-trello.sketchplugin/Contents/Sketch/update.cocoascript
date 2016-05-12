@@ -7,27 +7,24 @@ var downloadPath = '/tmp/';
 var downloadAs = '/tmp/sketch-to-trello.tar.gz';
 var downloadUrl = 'https://github.com/jclappiway/sketch-to-trello/archive/master.tar.gz';
 var downloadName = 'sketch-to-trello-master';
+var rawUrl = 'https://raw.githubusercontent.com/jclappiway/sketch-to-trello/master/sketch-to-trello.sketchplugin/Contents/Sketch/';
+var doc = null;
 
 var update = function(context){
     doc = context.document;
     pluginPath = context.scriptPath.split('sketch-to-trello.sketchplugin')[0];
-    // pluginPath = [NSString stringWithFormat:@'%@', pluginPath.replace(' ', '\\ ')];
-
-    log(pluginPath);
     var pluginSketchPath = [NSString stringWithFormat:@'%@', context.scriptPath.replace(/\/(\w*)\.cocoascript$/, '//')];
     var manifestContent = [NSData dataWithContentsOfFile: [NSString stringWithFormat:@'%@manifest.json', pluginSketchPath]];
     var manifest = [NSJSONSerialization JSONObjectWithData:manifestContent options:nil error:nil];
-    log(parseFloat(manifest.version));
     var currentVersion = parseFloat(manifest.version);
 
-    var response = getJSON('https://raw.githubusercontent.com/jclappiway/sketch-to-trello/master/sketch-to-trello.sketchplugin/Contents/Sketch/manifest.json');
-    var release_version = parseFloat(response.version);
+    var githubManifest = getJSON(rawUrl+'manifest.json');
+    var release_version = parseFloat(githubManifest.version);
 
-    // var release = getJSON('https://api.github.com/repos/jclappiway/sketch-to-trello/releases/latest');
-    // var release_version = parseFloat(release.tag_name);
-    // tarball = release.tarball_url;
     if(currentVersion < release_version){
       downloadTar();
+    }else{
+      [doc showMessage:"Your sketch-to-trello plugin is already up to date"];
     }
 }
 
@@ -78,6 +75,6 @@ var moove = function(){
   int status = [task terminationStatus];
 
   if (status == 0) {
-    log('its mooved');
+    [doc showMessage:"👏 Your sketch-to-trello plugin has been updated 👏"]
   }
 }
