@@ -2,28 +2,30 @@
 
 var tarball = null;
 var sha = null;
-var path = '/tmp/';
+var pluginPath = null;
 var downloadPath = '/tmp/';
 var downloadAs = '/tmp/sketch-to-trello.tar.gz';
+var downloadUrl = 'https://github.com/jclappiway/sketch-to-trello/archive/master.tar.gz';
+var downloadName = 'sketch-to-trello-master';
 
 var update = function(context){
     doc = context.document;
-    var pluginPath = [NSString stringWithFormat:@'%@', context.scriptPath.replace(/\/(\w*)\.cocoascript$/, '//')];
+    pluginPath = context.scriptPath.split('sketch-to-trello.sketchplugin')[0];
+    // pluginPath = [NSString stringWithFormat:@'%@', pluginPath.replace(' ', '\\ ')];
 
-    var manifestContent = [NSData dataWithContentsOfFile: [NSString stringWithFormat:@'%@manifest.json', pluginPath]];
+    log(pluginPath);
+    var pluginSketchPath = [NSString stringWithFormat:@'%@', context.scriptPath.replace(/\/(\w*)\.cocoascript$/, '//')];
+    var manifestContent = [NSData dataWithContentsOfFile: [NSString stringWithFormat:@'%@manifest.json', pluginSketchPath]];
     var manifest = [NSJSONSerialization JSONObjectWithData:manifestContent options:nil error:nil];
     log(parseFloat(manifest.version));
     var currentVersion = parseFloat(manifest.version);
 
-    var release = getJSON('https://api.github.com/repos/jclappiway/sketch-to-trello/releases/latest');
-    var release_version = parseFloat(release.tag_name);
-    tarball = release.tarball_url;
+    var response = getJSON('https://raw.githubusercontent.com/jclappiway/sketch-to-trello/master/sketch-to-trello.sketchplugin/Contents/Sketch/manifest.json');
+    var release_version = parseFloat(response.version);
 
-    var commits = getJSON('https://api.github.com/repos/jclappiway/sketch-to-trello/commits');
-    sha = commits[0].sha.substr(0,7);
-
-    log(sha);
-
+    // var release = getJSON('https://api.github.com/repos/jclappiway/sketch-to-trello/releases/latest');
+    // var release_version = parseFloat(release.tag_name);
+    // tarball = release.tarball_url;
     if(currentVersion < release_version){
       downloadTar();
     }
@@ -34,7 +36,7 @@ var downloadTar = function(){
   var task = NSTask.alloc().init();
 
   task.setLaunchPath("/usr/bin/curl");
-  var args = NSArray.arrayWithObjects("-o", downloadAs, "-L", tarball);
+  var args = NSArray.arrayWithObjects("-o", downloadAs, "-L", downloadUrl);
   task.setArguments(args);
   task.launch();
   task.waitUntilExit();
@@ -66,8 +68,9 @@ var moove = function(){
   var task = NSTask.alloc().init();
 
   task.setLaunchPath("/bin/cp");
-  log("/tmp/jclappiway-sketch-to-trello-"+sha);
-  var args = NSArray.arrayWithObjects("-R", downloadPath+"jclappiway-sketch-to-trello-"+sha, path);
+  log(downloadPath+downloadName);
+  log(pluginPath);
+  var args = NSArray.arrayWithObjects("-R", downloadPath+downloadName+'/sketch-to-trello.sketchplugin', pluginPath);
   task.setArguments(args);
   task.launch();
   task.waitUntilExit();
