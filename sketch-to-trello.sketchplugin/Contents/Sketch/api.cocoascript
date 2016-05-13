@@ -130,7 +130,7 @@ var pinCover = function(cardId, coverId) {
   task.setLaunchPath("/usr/bin/curl");
 
   if(coverId === null ){
-    coverValue =  "value=null";
+    coverValue =  "value=";
   }else{
     coverValue =  "value="+coverId;
   }
