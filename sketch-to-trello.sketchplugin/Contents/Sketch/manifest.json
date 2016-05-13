@@ -4,7 +4,7 @@
     "author": "Appiway",
     "authorEmail": "dev@appiway.com",
     "homepage": "http://appiway.com",
-    "version": "0.25",
+    "version": "0.26",
     "identifier": "com.appiway.trello-sketch-plugin",
     "commands": [{
         "name": "Update Token and key…",
